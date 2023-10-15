@@ -9,9 +9,11 @@ A kernel is a special program which provides access to the resources of the mach
 It's a simple program which reads commands from the user & executes them. The fact that it's in user space shows the power of the kernel interfaces & how flexible they are.
 
 ** fork, wait & exec
-When a process calls *fork*, a new(child) process is spawned with a copy of the memory of the calling(parent) process. The execution of this child process also begins from the point where the *fork* system call was made. *fork* returns the PID of the child process to the parent & '0' to the child process.
+When a process calls *fork*, a new(child) process is spawned with a copy of the memory of the calling(parent) process. The execution of this child process also begins from the point where the *fork* system call was made? *fork* returns the PID of the child process to the parent & '0' to the child process. It can also return *-1* if there's an error.
 
-*wait* system call returns the PID of an exited child process & -1 if there are no children. Optionally a pointer can also be passed to *wait* to recieve the exit status of the child.
+Most system calls, if not stated otherwise, returns 0 for no error & -1 if there is.
+
+The *wait* system call, waits until a child exits & returns it's PID. It returns -1 if there are no children. Optionally a pointer can also be passed to *wait* to recieve the exit status of the child.
 #+begin_src C
   int exit_code = 0;
   int pid;
@@ -32,7 +34,10 @@ The *exec* system call replaces the memory of the calling process with a new mem
   exec("/bin/echo", argv);
   printf("exec error\n");
 #+end_src
+As one can see the first argument to the program is the name of the program itself, & so, most programs generally ignore the first argument.
 
 The *shell* then, broadly speaking, is mostly a composition of these system calls. It reads the command from the user, forks & then executes the required program via *exec*. There is good reason why *exec* & *fork* aren't combined into a single call. The shell exploits this separation to handle I/O redirection in a clean way. One may think that is sub-optimal as we create a copy of the process & then immediately repalce the memory via *exec*, but most operaing kernels optimize the implementation of *fork* for this use case by using virtual memory techniques such as copy-on-write.
 
-** 
+** File Descriptors 
+A file descriptor is a (small)integer which represents a kernel managed object that a process may read & write to. Processes may obtain a file descriptor by opening a file, directory, device, by creating a pipe or by duplicating an existing descriptor. File descriptors abstract away the differences b/w files, pipes & devices, making them all look like a stream of byters. 
+
