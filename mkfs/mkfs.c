@@ -151,7 +151,10 @@ main(int argc, char *argv[])
 
     bzero(&de, sizeof(de));
     de.inum = xshort(inum);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
     strncpy(de.name, shortname, DIRSIZ);
+#pragma GCC diagnostic pop
     iappend(rootino, &de, sizeof(de));
 
     while((cc = read(fd, buf, sizeof(buf))) > 0)
