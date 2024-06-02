@@ -7,13 +7,15 @@
   outputs = { self, nixpkgs, flake-utils }: flake-utils.lib.eachDefaultSystem (system:
     let
       pkgs = nixpkgs.legacyPackages.${system};
-      pkgsCross = pkgs.pkgsCross.riscv64;
+      # Cross compiler for riscv.
+      riscv64-gcc11 = pkgs.pkgsCross.riscv64.buildPackages.gcc11;
     in
     {
       devShell = pkgs.mkShell {
-        nativeBuildInputs = [
-          pkgs.qemu
-          pkgsCross.buildPackages.gcc11
+        nativeBuildInputs = with pkgs; [
+          qemu
+          riscv64-gcc11
+          clang-tools
         ];
       };
     }
