@@ -1,0 +1,43 @@
+* OS Organization
+When archtecting an operating system, there are 3 essential requirements that need to be fulfilled:
+- multiplexing - Time-sharing different processes running on the system.
+- isolation - Processes shouldn't be allowed to affect each other by default.
+- interaction - Processes should be allowed to interact w/ each other on an opt in basis.
+
+** Side Note On Xv6 & RiscV
+Xv6 is built for a multi-core RISC-V microprocessor & much of it's low level functionality is coupled w/ it. For eg: it's process implementation. 
+RiscV is a 64-bit computer, & Xv6 is written in *LP64* C, i.e. long & pointers are 64-bit while int is 32-bit. 
+
+** Why not Unikernel ?
+Unikernel is a type of organization where the kernel is written as a library & each application links w/ said library. The applications have direct access to hardware & thus can reach a very high degree of determinism when it comes to performance. We can see such organization in some embedded & real-time systems.
+As one can imagine, in such a setup, applications have to very well behaved. They must give up the CPU on their own & not have bugs which can cause hardware failures, which is generally not the case. Thus a setup with much stronger isolation is needed in the case of general purpose OS's.
+
+** Abstracting Physical Resources For Isolation
+Abstracting physical resources allows the OS to maintain control of how to manage the hardware & share it amongst different applications. Some examples of this are:
+- File System - W/ this we get the convenience of *pathnames*, which is much more convenient than directly writing blocks on the disk. It allows the OS to manage the disk & for applications to both easily isolate & interact.
+- CPU slice - Unix transparently switches the CPU across applications, saving & restoring register states as necessary. This way multiple applications keep running, even if some run seemingly forever.
+- *exec* - Applications are loaded into memory via the exec sys-call rather they themselves directly writing/copying their memory image into the physical memory. So, if the memory is tight, the OS can decide to store some of the memory to disk.
+- File Descriptors - As already seen before, this allows for the OS to implement pipelining, interaction & various other things. An interesting thing to note is that, when pipelining, if a process in the pipeline fails, the kernel will generate an EOF for the process next in line.
+
+** CPU Modes
+Strong isolation warrants that there is a hard boundary b/w applications & the operating system. If an application fails, the operating system & other applications should remain un-affected.
+Then it is required that applications should not be able to read OR write to any of the operating system's or some other applications memory. To achieve this, CPUs provide additional hardware support.
+As of now Risc-V provides 3 different CPU modes with different levels of privileges, they are: *machine mode*, *supervisor mode* & *user mode*.
+*** Machine Mode
+This is the mode that the CPU boots in. In this mode the instructions have full privilege. It's only purpose is to configure the system/computer.
+Xv6 also executes a few lines in machine mode, but then transitions to *supervisor mode*.
+*** Supervisor Mode
+In this mode, one can execute /privileged instructions/. Such instructions include things like enabling/disabling interrupts, reading & writing registers that hold the page table etc..
+If an application(i.e. in *user mode*), tries to execute a privileged instruction, then the CPU doesn't execute that instruction, but instead switches to supervisor mode so that the it can terminate that application. 
+*** User Mode & Transitioning To Supervisor Mode
+One can only execute basic instructions(like arithmetics) in this mode. So to use the rest of the functionality of the computer, applications must transition to supervisor mode via a system call, i.e. calling a function in the kernel.
+But the application can't just call any kernel function, it must call an entry point directed by the kernel & via a special instruction. Risc-V provides the *ecall* instruction to serve this purpose. Once the CPU switches to supervisor mode, the kernel validates the arguments, things like whether the addresses passed in belongs to that applications memory & whether the application is allowed to execute the action or not. After which the kernel can decide to execute or not.
+NOTE that it's crucial that kernel controls the entry point for such calls, otherwise the applications could just skip the validation of the inputs by calling at a point after them.
+** Kernel Organization
+There are essentially 2 ways to organize kernels. =monolithic= & =micro=.
+*** Monolithic-Kernel
+In this sytle of organization, (mostly)all of the sub-systems like the file-system, networking etc., live inside the kernel & run in *supervisor mode*. The good thing about this is that they can be tightly integrated & can provide good performance.
+But, typically the interfaces b/w these sub-systems can get complicated & any kind of error/exception in these sub-systems can cause the computer to fail, seeing as it's running in supervisor mode.
+Linux is a =monolith= & is known to provide good performance to OS intensive applications.
+*** Microkernel
+They provide most of the functionality of the system in *user mode*. 
